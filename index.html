@@ -33,20 +33,34 @@
             constructor() {
                 this.x = Math.random() * canvas.width;
                 this.y = canvas.height;
-                this.targetY = Math.random() * canvas.height / 2 + 50; // Random target height
+                this.targetY = Math.random() * (canvas.height / 2) + 50; // Random target height
                 this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
                 this.radius = Math.random() * 2 + 3; // Random initial radius
                 this.exploded = false;
                 this.particles = [];
+                this.vx = Math.random() * 4 - 2; // Horizontal velocity
+                this.vy = Math.random() * -3 - 5; // Vertical velocity
+                this.maxY = this.y; // Track maximum height reached by the firework
             }
 
             update() {
                 if (!this.exploded) {
-                    this.y -= 2; // Slower ascent
-                    if (this.y <= this.targetY) {
+                    // Move the firework upwards
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vy += 0.05; // Gravity effect
+
+                    // Track maximum height
+                    if (this.y < this.maxY) {
+                        this.maxY = this.y;
+                    }
+
+                    // Explode when firework reaches the highest point
+                    if (this.vy > 0 && this.y >= this.maxY) {
                         this.explode();
                     }
                 } else {
+                    // Update particles' positions
                     for (let i = this.particles.length - 1; i >= 0; i--) {
                         const p = this.particles[i];
                         p.vx *= 0.99; // Air resistance (horizontal)
@@ -54,10 +68,10 @@
                         p.vy += 0.05; // Gravity effect
                         p.x += p.vx;
                         p.y += p.vy;
-                        p.radius = Math.max(0, p.radius - 0.02); // Slow particle shrink
+                        p.radius = Math.max(0, p.radius - 0.02); // Shrink particle over time
 
                         if (p.radius <= 0) {
-                            this.particles.splice(i, 1); // Remove particles when invisible
+                            this.particles.splice(i, 1); // Remove invisible particles
                         }
                     }
                 }
@@ -70,6 +84,7 @@
                     ctx.fillStyle = this.color;
                     ctx.fill();
                 } else {
+                    // Draw all particles after explosion
                     this.particles.forEach(p => {
                         ctx.beginPath();
                         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
@@ -81,13 +96,13 @@
 
             explode() {
                 this.exploded = true;
-                const numParticles = Math.floor(Math.random() * 50) + 40; // More particles for richer explosion
+                const numParticles = Math.floor(Math.random() * 50) + 40; // Number of particles in explosion
                 for (let i = 0; i < numParticles; i++) {
-                    const angle = Math.random() * Math.PI * 2; // Random direction
-                    const speed = Math.random() * 4 + 2; // Lower initial speed for more natural effect
-                    const vx = Math.cos(angle) * speed;
-                    const vy = Math.sin(angle) * speed;
-                    const radius = Math.random() * 3 + 1; // Random size for particles
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 4 + 2;
+                    const vx = Math.cos(angle) * speed + Math.random() * 2 - 1;
+                    const vy = Math.sin(angle) * speed + Math.random() * 2 - 1;
+                    const radius = Math.random() * 3 + 1;
                     const color = COLORS[Math.floor(Math.random() * COLORS.length)];
                     this.particles.push({ x: this.x, y: this.y, vx, vy, radius, color });
                 }
@@ -96,7 +111,10 @@
 
         // Fireworks array
         let fireworks = [];
-        for (let i = 0; i < 10; i++) {
+        const NUM_FIREWORKS = 50; // Ensure 50 fireworks at all times
+
+        // Function to generate new firework
+        function generateFirework() {
             fireworks.push(new Firework());
         }
 
@@ -105,23 +123,24 @@
             ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Fading effect for smoother transitions
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // Ensure that there are always 50 fireworks on the screen
+            while (fireworks.length < NUM_FIREWORKS) {
+                generateFirework();
+            }
+
             // Update and draw fireworks
             for (let i = fireworks.length - 1; i >= 0; i--) {
                 const firework = fireworks[i];
                 firework.update();
                 firework.draw();
 
-                // Remove fireworks that are completely finished
-                if (firework.exploded && firework.particles.length === 0) {
+                // Remove fireworks that have exploded and their particles are all gone
+                if (firework.particles.length === 0 && firework.exploded) {
                     fireworks.splice(i, 1);
                 }
             }
 
-            // Ensure a minimum number of fireworks is always on screen
-            while (fireworks.length < 10) {
-                fireworks.push(new Firework());
-            }
-
+            // Keep creating fireworks every frame
             requestAnimationFrame(animate);
         }
 
@@ -133,10 +152,10 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
 
-            // Clear fireworks and restart
+            // Clear and regenerate fireworks on resize
             fireworks = [];
-            for (let i = 0; i < 10; i++) {
-                fireworks.push(new Firework());
+            for (let i = 0; i < NUM_FIREWORKS; i++) {
+                generateFirework();
             }
         });
     </script>
